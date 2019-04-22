@@ -1,0 +1,139 @@
+---
+title: "Reproducible Research Assignment 1"
+author: "Yen-Chu Tu"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading and Processing the Data
+
+First, we must read the data from the current directory.
+Then, we process the data into a format that is convenient for manipulation.
+
+```{r}
+data <- read.csv("./activity.csv")
+data <- data.frame(data)
+```
+
+
+## What is the mean total number or steps taken each day?
+
+For this part of the assignment, NA values are ignored.
+Here, we find the total number of steps taken each day
+
+```{r}
+agg <- aggregate(data$steps, by=list(Category=data$date),FUN=sum)
+agg
+```
+
+Then, we create a histogram of the total number of steps taken each day
+
+```{r}
+hist(agg$x,xlab="Steps")
+```
+
+We then calculate the mean and median of total number of steps each day
+
+```{r}
+mean <- mean(agg$x, na.rm=TRUE)
+median <- median(agg$x, na.rm=TRUE)
+mean
+median
+```
+
+## What is the daily activity pattern?
+
+We first aggregate the data by time interval through the mean function.
+Then, we can plot the time series plot of the aggregate to see daily activity.
+
+```{r}
+aggint <- aggregate(data$steps, by=list(Interval=data$interval), FUN=mean, na.rm=TRUE)
+plot.ts(aggint$Interval, aggint$x, type="l", xlab="Time Interval", ylab = "Average Steps")
+```
+
+Next, we find which interval has the highest average number of steps.
+
+```{r}
+avgmax <- aggint[which.max(aggint$x),]
+avgmax
+```
+
+## Imputing missing values
+
+We first determine how many missing values of Steps are in the dataset.
+
+```{r}
+totalmissing <- sum(is.na(data$steps))
+totalmissing
+```
+
+I chose to replace na values with the average step across all intervals in a day
+The updated data frame is input into the data frame 'fulldata'
+
+```{r}
+avgintsteps <- mean(aggint$x)
+fulldata <- data
+fulldata$steps[is.na(fulldata$steps)] <- avgintsteps
+```
+
+Next we llot the histogram of the full data, and the find it's mean and median
+
+```{r}
+fullagg <- aggregate(fulldata$steps, by=list(Category=fulldata$date),FUN=sum)
+hist(fullagg$x, xlab="Steps", main="Histogram of Modified Data")
+fullmean <- mean(fullagg$x)
+fullmedian <- median(fullagg$x)
+fullmean
+fullmedian
+```
+
+Comparing to the median and mean values of the NA present dataset,
+Since NA values were replaced by the mean value with our estimation, the median 
+value shifted and matched the mean value. 
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+First, to find the weekdays of the date, we must convert the class of the date
+
+```{r}
+fulldata$date <- as.Date(fulldata$date,format="%Y-%m-%d")
+```
+
+We then convert the date in the dataset to weekdays in a new dataset
+
+```{r}
+weekdaydata <- fulldata
+weekdaydata$date <- weekdays(weekdaydata$date)
+```
+
+We select the days by weekdays to sort the days as weekdays or weekends.
+
+```{r}
+weekdays <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+weekdaydata$days <- factor(weekdaydata$date %in% weekdays, levels = c(TRUE, FALSE), labels = c("weekday", "weekend"))
+```
+
+We split the data into weekday and weekend data to plot seperately
+and take their aggregate.
+
+```{r}
+weekday <- weekdaydata[which(weekdaydata$days=="weekday"),]
+weekend <- weekdaydata[which(weekdaydata$days=="weekend"),]
+aggwkday <- aggregate(weekday$steps, by=list(Interval=weekday$interval), FUN=mean)
+aggwkend <- aggregate(weekend$steps, by=list(Interval=weekend$interval), FUN=mean)
+```
+
+Lastly, we plot the weekday and weekend data together.
+
+```{r}
+par(mfrow=c(2,1))
+plot(aggwkday$Interval, aggwkday$x, ylab = "Steps", xlab = "Interval", main= "Weekday Steps", type="l")
+plot(aggwkend$Interval, aggwkend$x, ylab = "Steps", xlab = "Interval", main= "Weekend Steps", type="l")
+```
+
+Thus, all steps for this assignment is complete.
